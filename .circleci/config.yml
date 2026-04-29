@@ -1,0 +1,202 @@
+version: 2.1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Orbs
+#   slack  — sends failure alerts to #e2e-alerts.
+#            Requires a CircleCI context named "slack-secrets" containing:
+#              SLACK_ACCESS_TOKEN  (Bot User OAuth Token)
+#              SLACK_DEFAULT_CHANNEL  (channel ID, e.g. C0123456789)
+# ─────────────────────────────────────────────────────────────────────────────
+orbs:
+  slack: circleci/slack@4.12.1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pipeline parameters
+#   shard-total — number of parallel shards. Increase this (and the matrix
+#                 list in the workflows section) as the suite grows.
+# ─────────────────────────────────────────────────────────────────────────────
+parameters:
+  shard-total:
+    type: integer
+    default: 3
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Executor
+#   The official Playwright Docker image ships with all browsers pre-installed,
+#   eliminating a separate `npx playwright install` step and keeping CI fast.
+#   Pin to the same Playwright version declared in package.json to avoid drift.
+# ─────────────────────────────────────────────────────────────────────────────
+executors:
+  playwright:
+    docker:
+      - image: mcr.microsoft.com/playwright:v1.48.0-noble
+    resource_class: medium  # 2 vCPU / 4 GB — sufficient for a headless Chromium shard
+    working_directory: ~/project
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Reusable commands
+# ─────────────────────────────────────────────────────────────────────────────
+commands:
+  install-deps:
+    description: Checkout code and restore cached npm dependencies
+    steps:
+      - checkout
+      - restore_cache:
+          # Cache key includes package-lock.json checksum so the cache is
+          # invalidated automatically whenever dependencies change.
+          keys:
+            - npm-v1-{{ checksum "package-lock.json" }}
+      - run:
+          name: Install npm dependencies
+          command: npm ci
+      - save_cache:
+          key: npm-v1-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Jobs
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── Main test job (sharded) ────────────────────────────────────────────────
+  e2e-tests:
+    parameters:
+      shard-index:
+        type: integer
+    executor: playwright
+    environment:
+      CI: "true"
+      # BASE_URL can be overridden per environment (staging vs production).
+      # Playwright falls back to https://maps.roadtrippers.com if unset.
+      BASE_URL: https://maps.roadtrippers.com
+    steps:
+      - install-deps
+
+      - run:
+          name: Run Playwright tests — shard << parameters.shard-index >>/<< pipeline.parameters.shard-total >>
+          # Reporters are already configured in playwright.config.ts:
+          #   • list   — real-time output in the CI log
+          #   • junit  — writes test-results/results.xml (ingested by store_test_results)
+          #   • html   — writes playwright-report/ (uploaded as an artifact)
+          command: >-
+            npx playwright test
+            --shard=<< parameters.shard-index >>/<< pipeline.parameters.shard-total >>
+
+      # Ingest JUnit XML so CircleCI builds per-test history, timing trends,
+      # and automatic flake detection across runs.
+      - store_test_results:
+          path: test-results
+
+      # Upload the HTML report (with screenshots and video on failure) as a
+      # build artifact so engineers can inspect failures without re-running locally.
+      - store_artifacts:
+          path: playwright-report
+          destination: playwright-report-shard-<< parameters.shard-index >>
+
+      # Upload raw JUnit XML + trace files for deeper debugging if needed.
+      - store_artifacts:
+          path: test-results
+          destination: test-results-shard-<< parameters.shard-index >>
+
+      # Send a Slack alert only on failure. The message includes branch, committer,
+      # shard index, and a direct link to the failing build.
+      - slack/notify:
+          event: fail
+          custom: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":red_circle: *E2E tests failed* — shard << parameters.shard-index >>/<< pipeline.parameters.shard-total >>\n*Branch:* `${CIRCLE_BRANCH}`\n*Author:* ${CIRCLE_USERNAME}\n*Build:* <${CIRCLE_BUILD_URL}|View in CircleCI>"
+                  }
+                }
+              ]
+            }
+
+  # ── Flaky quarantine job (nightly only) ───────────────────────────────────
+  flaky-quarantine:
+    executor: playwright
+    environment:
+      CI: "true"
+      BASE_URL: https://maps.roadtrippers.com
+    steps:
+      - install-deps
+
+      - run:
+          name: Run quarantined flaky tests with increased retries
+          # Tests tagged @flaky are excluded from pr-tests (--grep-invert @flaky).
+          # Here they run nightly with 2 retries to measure whether they self-heal
+          # or need active investigation.
+          command: npx playwright test --grep "@flaky" --retries=2
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: playwright-report
+          destination: playwright-report-flaky
+
+      # Alert if quarantined tests are still failing after 2 retries — this means
+      # they are not self-healing and need immediate attention.
+      - slack/notify:
+          event: fail
+          custom: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":warning: *Quarantined tests still failing after 2 retries*\nThese tests are blocking promotion from quarantine.\n<${CIRCLE_BUILD_URL}|View flaky report>"
+                  }
+                }
+              ]
+            }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Workflows
+# ─────────────────────────────────────────────────────────────────────────────
+workflows:
+
+  # ── PR workflow — runs on every push to any branch except main ─────────────
+  # Shards run in parallel. All three must pass for the workflow to go green.
+  # Flaky tests are excluded here so they cannot block a merge.
+  pr-tests:
+    jobs:
+      - e2e-tests:
+          matrix:
+            parameters:
+              shard-index: [1, 2, 3]
+          # "slack-secrets" context must contain SLACK_ACCESS_TOKEN and
+          # SLACK_DEFAULT_CHANNEL, configured in CircleCI Organisation Settings.
+          context: slack-secrets
+          filters:
+            branches:
+              ignore: main
+
+  # ── Nightly regression — runs at 02:00 UTC every day against main ──────────
+  # Catches environment-sensitive failures (live API changes, session expiry,
+  # third-party popup timing changes) that would not reliably surface on PRs.
+  # Also runs the quarantine job to check whether flaky tests have self-healed.
+  nightly-regression:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *"
+          filters:
+            branches:
+              only: main
+    jobs:
+      - e2e-tests:
+          matrix:
+            parameters:
+              shard-index: [1, 2, 3]
+          context: slack-secrets
+      # Quarantine job starts only after all three shards complete, so the
+      # Slack channel gets one combined failure picture rather than four alerts.
+      - flaky-quarantine:
+          context: slack-secrets
+          requires:
+            - e2e-tests

@@ -1,0 +1,97 @@
+<testsuites id="" name="" tests="21" failures="1" skipped="0" errors="0" time="348.302942">
+<testsuite name="trip-planning-negative.spec.ts" timestamp="2026-04-30T12:09:07.502Z" hostname="chromium" tests="9" failures="0" skipped="0" time="132.628" errors="0">
+<testcase name="Trip planning — negative scenarios › origin input is empty by default" classname="trip-planning-negative.spec.ts" time="13.268">
+</testcase>
+<testcase name="Trip planning — negative scenarios › destination input is empty by default" classname="trip-planning-negative.spec.ts" time="12.279">
+</testcase>
+<testcase name="Trip planning — negative scenarios › origin input is empty after clearing" classname="trip-planning-negative.spec.ts" time="12.789">
+</testcase>
+<testcase name="Trip planning — negative scenarios › destination input is empty after clearing" classname="trip-planning-negative.spec.ts" time="11.431">
+</testcase>
+<testcase name="Trip planning — negative scenarios › cannot create a trip with both fields empty — shows validation errors on both inputs" classname="trip-planning-negative.spec.ts" time="15.57">
+</testcase>
+<testcase name="Trip planning — negative scenarios › cannot create a trip with missing origin — shows validation error on origin" classname="trip-planning-negative.spec.ts" time="15.975">
+</testcase>
+<testcase name="Trip planning — negative scenarios › cannot create a trip with missing destination — shows validation error on destination" classname="trip-planning-negative.spec.ts" time="15.947">
+</testcase>
+<testcase name="Trip planning — negative scenarios › searching for a gibberish stop shows no place results" classname="trip-planning-negative.spec.ts" time="16.971">
+</testcase>
+<testcase name="Trip planning — negative scenarios › searching with only whitespace shows no place results" classname="trip-planning-negative.spec.ts" time="18.398">
+</testcase>
+</testsuite>
+<testsuite name="trip-planning.spec.ts" timestamp="2026-04-30T12:09:07.502Z" hostname="chromium" tests="12" failures="1" skipped="0" time="212.57" errors="0">
+<testcase name="Trip planning — happy path › trip creation modal is visible after clicking New Trip" classname="trip-planning.spec.ts" time="11.919">
+</testcase>
+<testcase name="Trip planning — happy path › modal contains origin and destination inputs" classname="trip-planning.spec.ts" time="17.515">
+</testcase>
+<testcase name="Trip planning — happy path › modal contains the Create trip button" classname="trip-planning.spec.ts" time="12.157">
+</testcase>
+<testcase name="Trip planning — happy path › Quick launch is selected by default" classname="trip-planning.spec.ts" time="12.237">
+</testcase>
+<testcase name="Trip planning — happy path › can fill in a starting point" classname="trip-planning.spec.ts" time="11.416">
+</testcase>
+<testcase name="Trip planning — happy path › can fill in a destination" classname="trip-planning.spec.ts" time="11.772">
+</testcase>
+<testcase name="Trip planning — happy path › modal closes and onboarding view appears after creating a trip" classname="trip-planning.spec.ts" time="23.637">
+</testcase>
+<testcase name="Trip planning — happy path › origin and destination appear as waypoints after creating a trip" classname="trip-planning.spec.ts" time="21.415">
+</testcase>
+<testcase name="Trip planning — happy path › Launch trip button is visible after creating a trip" classname="trip-planning.spec.ts" time="26.788">
+</testcase>
+<testcase name="Trip planning — happy path › can add a stop to the trip" classname="trip-planning.spec.ts" time="22.273">
+</testcase>
+<testcase name="Trip planning — happy path › trip has three waypoints after adding one stop" classname="trip-planning.spec.ts" time="22.917">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|trip-planning-Trip-plannin-bc6b0-oints-after-adding-one-stop-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|trip-planning-Trip-plannin-bc6b0-oints-after-adding-one-stop-chromium/video.webm]]
+
+[[ATTACHMENT|trip-planning-Trip-plannin-bc6b0-oints-after-adding-one-stop-chromium/error-context.md]]
+]]>
+</system-out>
+<failure message="expect(locator).toHaveCount(expected) failed" type="expect.toHaveCount">
+<![CDATA[  [chromium] › trip-planning.spec.ts:82:6 › Trip planning — happy path › trip has three waypoints after adding one stop 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#onboarding-view .onboarding-panel.additional .sidebar').locator('.waypoint-list').locator('.onboarding-waypoint-view')
+    Expected: 3
+    Received: 2
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 5000ms
+      - waiting for locator('#onboarding-view .onboarding-panel.additional .sidebar').locator('.waypoint-list').locator('.onboarding-waypoint-view')
+        9 × locator resolved to 2 elements
+          - unexpected value "2"
+
+
+       at ../pages/trip-planner/trip-planner-asserter.ts:76
+
+      74 | 		await expect(
+      75 | 			this.tripPlannerPage.map.waypointList.locator(".onboarding-waypoint-view"),
+    > 76 | 		).toHaveCount(count);
+         | 		  ^
+      77 | 	}
+      78 |
+      79 | 	async launchTripButtonIsVisible(): Promise<void> {
+        at TripPlannerAsserter.waypointCountIs (/Users/istoychev/Documents/Personal Documents/projects /yamasoft-e2e-tests/e2e-tests-yamasoft/pages/trip-planner/trip-planner-asserter.ts:76:5)
+        at /Users/istoychev/Documents/Personal Documents/projects /yamasoft-e2e-tests/e2e-tests-yamasoft/tests/trip-planning.spec.ts:86:34
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/trip-planning-Trip-plannin-bc6b0-oints-after-adding-one-stop-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/trip-planning-Trip-plannin-bc6b0-oints-after-adding-one-stop-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/trip-planning-Trip-plannin-bc6b0-oints-after-adding-one-stop-chromium/error-context.md
+]]>
+</failure>
+</testcase>
+<testcase name="Trip planning — happy path › can complete full trip planning flow: create, add stop, and launch" classname="trip-planning.spec.ts" time="18.524">
+</testcase>
+</testsuite>
+</testsuites>

@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"target": "es2022",
+		"module": "commonjs",
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"strict": true,
+		"skipLibCheck": true,
+		"noImplicitAny": true,
+		"resolveJsonModule": true,
+		"useDefineForClassFields": false,
+		"types": ["node"],
+		"paths": {
+			"@pages/*": ["./pages/*"],
+			"@tests/*": ["./tests/*"],
+			"@base/*": ["./pages/base/*"]
+		}
+	}
+}
